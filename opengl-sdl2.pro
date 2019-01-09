@@ -1,9 +1,12 @@
 TEMPLATE = app
 CONFIG += console c++11
 CONFIG -= app_bundle
-CONFIG -= qt
+CONFIG += qt
 
 SOURCES += \
-    application.cpp
+    src/application.cpp \
 
 LIBS += -lSDL2 -lGL -lGLEW
+
+DISTFILES += \
+    res/shaders/basic.shader
