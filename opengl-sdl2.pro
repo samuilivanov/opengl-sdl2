@@ -5,8 +5,16 @@ CONFIG += qt
 
 SOURCES += \
     src/application.cpp \
+    src/renderer.cpp \
+    src/vertexbuffer.cpp \
+    src/indexbuffer.cpp
 
 LIBS += -lSDL2 -lGL -lGLEW
 
 DISTFILES += \
     res/shaders/basic.shader
+
+HEADERS += \
+    src/renderer.h \
+    src/vertexbuffer.h \
+    src/indexbuffer.h

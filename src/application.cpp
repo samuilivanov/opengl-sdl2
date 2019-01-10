@@ -7,34 +7,13 @@
 #include <SDL2/SDL_opengl.h>
 #include <string>
 #include <sstream>
-#include <QtCore/QtGlobal>
 
-// Shoudl probably replace that with the c FILE
+// Shoudl probably replace that with the C FILE
 #include <fstream>
+#include "renderer.h"
+#include "vertexbuffer.h"
+#include "indexbuffer.h"
 
-#define ASSERT(x)  Q_ASSERT(x)
-#define GLCall(x) GLClearError();\
-    x;\
-    ASSERT(GLLogCall(#x, __FILE__, __LINE__))
-
-// Clearing the GL errors
-static void GLClearError()
-{
-    while (glGetError() != GL_NO_ERROR);
-}
-
-static bool GLLogCall(const char *function, const char *file, int line)
-{
-    while (GLenum error = glGetError()) {
-        std::cout << "[OpenGL error] (" << error << ")" << std::endl;
-
-        // This part doen't really matter with Q_ASSERT it will print it
-        std::cout << "In function : " << function << std::endl << "In file : "
-                  << file << std::endl << "In line : " << line << std::endl;
-        return false;
-    }
-    return true;
-}
 
 struct ShaderProgramScource
 {
@@ -127,6 +106,13 @@ static unsigned int CreateShader(const std::string &vertexShader,
 
 int main()
 {
+    // Setting up for FPS 60
+    const int SCREEN_FPS = 60;
+    const int SCREEN_TICKS_PER_FRAME = 1000 / SCREEN_FPS;
+    uint32_t frameStart;
+    uint32_t frameTime;
+    // end
+
     SDL_Window *window;
     SDL_Init(SDL_INIT_VIDEO);
     window = SDL_CreateWindow("OpenGL", SDL_WINDOWPOS_CENTERED,
@@ -140,8 +126,6 @@ int main()
 
     SDL_Renderer *renderer;
     renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
-
-    //auto context = SDL_GL_CreateContext(window);
 
     // Initialise OpenGL with Glew, get the access to OpenGl functions
     if (glewInit() != GLEW_OK) {
@@ -162,33 +146,48 @@ int main()
         2, 3, 0
     };
 
-    uint32_t buffer;
-    GLCall(glGenBuffers(1, &buffer));
-    GLCall(glBindBuffer(GL_ARRAY_BUFFER, buffer));
-    GLCall(glBufferData(GL_ARRAY_BUFFER, 6 * 2 * sizeof (float),
-                        positions, GL_STATIC_DRAW));
+    unsigned int vao;
+    GLCall(glGenVertexArrays(1, &vao));
+    GLCall(glBindVertexArray(vao));
+
+    VertexBuffer vb(positions, 4 * 2 * sizeof (float));
 
     GLCall(glEnableVertexAttribArray(0));
     GLCall(glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE,
                                  sizeof (float) * 2, nullptr));
 
-    uint32_t ibo;
-    GLCall(glGenBuffers(1, &ibo));
-    GLCall(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo));
-    GLCall(glBufferData(GL_ELEMENT_ARRAY_BUFFER, 6 * sizeof (uint32_t),
-                                            indices, GL_STATIC_DRAW));
+    IndexBuffer ib(indices, 6);
 
     ShaderProgramScource source = ParseShader("/home/samuil/projects/opengl-sdl2/res/shaders/basic.shader");
 
     // Test the parsing code
     std::cout << source.VertexSource << std::endl;
     std::cout << source.FragmentSource << std::endl;
+    // end test
 
     unsigned int shader = CreateShader(source.VertexSource,
                                        source.FragmentSource);
     GLCall(glUseProgram(shader));
 
+    GLCall(int location = glGetUniformLocation(shader, "u_Color"));
+    ASSERT(location != -1);
+    GLCall(glUniform4f(location, 0.2f, 0.3f, 0.8f, 1.0f));
+
+    // Unbounding
+    GLCall(glBindVertexArray(0));
+    GLCall(glUseProgram(0));
+    GLCall(glBindBuffer(GL_ARRAY_BUFFER, 0));
+    GLCall(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0));
+
+
+    float r = 0.0f;
+    float increment = 0.05f;
+
     while (1) {
+
+        frameStart = SDL_GetTicks();
+
+        // Handle the closing of the window
         SDL_Event event;
         while(SDL_PollEvent(&event)) {
             if (event.type == SDL_QUIT) {
@@ -196,14 +195,38 @@ int main()
                 return 0;
             }
 
-        }
+        } // end of closing the window
+
         SDL_RenderClear(renderer);
 
         GLCall(glClear(GL_COLOR_BUFFER_BIT));
 
+        GLCall(glUseProgram(shader));
+
+        // The color of the rect
+        GLCall(glUniform4f(location, r, 0.3f, 0.8f, 1.0f));
+        // Bounding the vertex array objects
+        GLCall(glBindVertexArray(vao));
+        // Bounding the index buffer object
+        ib.bind();
+        // Draw on the screen
         GLCall(glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr));
 
+        if (r > 1.0f) {
+            increment = -0.05f;
+        } else if (r < 0.0f) {
+            increment = 0.05f;
+        }
+
+        r += increment;
+
         SDL_RenderPresent(renderer);
+
+        // Making framerate to be 60fps
+        frameTime = SDL_GetTicks() - frameStart;
+        if (SCREEN_TICKS_PER_FRAME > frameTime) {
+            SDL_Delay(SCREEN_TICKS_PER_FRAME - frameTime);
+        }
     }
 
     glDeleteProgram(shader);
