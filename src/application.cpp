@@ -15,96 +15,7 @@
 #include "indexbuffer.h"
 #include "vertexarray.h"
 #include "vertexbufferlayout.h"
-
-
-struct ShaderProgramScource
-{
-    std::string VertexSource;
-    std::string FragmentSource;
-};
-
-static ShaderProgramScource ParseShader(const std::string filepath)
-{
-    std::ifstream stream;
-    stream.open(filepath, std::ios::in);
-
-    enum class ShaderType {
-        NONE = -1,
-        VERTEX = 0,
-        FRAGMENT = 1
-    };
-
-    ShaderType type = ShaderType::NONE;
-
-    std::stringstream ss[2];
-
-    std::string line;
-    while (std::getline(stream, line)) {
-        if (line.find("#shader") != std::string::npos) {
-            if (line.find("vertex") != std::string::npos) {
-                type = ShaderType::VERTEX;
-
-            } else if (line.find("fragment") != std::string::npos) {
-                type = ShaderType::FRAGMENT;
-            }
-        } else {
-            ss[static_cast<int>(type)] << line << '\n';
-        }
-    }
-
-    return { ss[0].str(), ss[1].str() };
-}
-
-static unsigned int CompileShader(const std::string &source,
-                                  unsigned int type)
-{
-    unsigned int id = glCreateShader(type);
-    const char *src = source.c_str();
-    GLCall(glShaderSource(id, 1, &src, nullptr));
-    GLCall(glCompileShader(id));
-
-    int result;
-    GLCall(glGetShaderiv(id, GL_COMPILE_STATUS, &result));
-    if (result == GL_FALSE) {
-        int32_t lenght;
-        glGetShaderiv(id, GL_INFO_LOG_LENGTH, &lenght);
-
-        // Really like this alloca function
-        char* message = static_cast<char*>(alloca(
-                        static_cast<uint32_t>(lenght) * sizeof (char)));
-        glGetShaderInfoLog(id, lenght, &lenght, message);
-        std::cout << "Failed to compile!\n" <<
-                        (type == GL_VERTEX_SHADER ? "vertex" : "fragment")
-                        << std::endl;
-        std::cout <<message << std::endl;
-
-        glDeleteShader(id);
-        return 0;
-    }
-
-    return id;
-}
-
-// Shader source code
-static unsigned int CreateShader(const std::string &vertexShader,
-                        const std::string &fragmentShader)
-{
-    GLCall(unsigned int program = glCreateProgram());
-    unsigned int vs = CompileShader(vertexShader, GL_VERTEX_SHADER);
-    unsigned int fs = CompileShader(fragmentShader, GL_FRAGMENT_SHADER);
-
-    // TODO: go throud the docs
-    GLCall(glAttachShader(program, vs));
-    GLCall(glAttachShader(program, fs));
-    GLCall(glLinkProgram(program));
-    GLCall(glValidateProgram(program));
-
-    // TODO: glDetackShader should be used here
-    glDeleteShader(vs);
-    glDeleteShader(fs);
-
-    return program;
-}
+#include "shader.h"
 
 int main()
 {
@@ -157,27 +68,14 @@ int main()
 
     IndexBuffer ib(indices, 6);
 
-    ShaderProgramScource source = ParseShader("/home/samuil/projects/opengl-sdl2/res/shaders/basic.shader");
+    Shader shader("/home/samuil/projects/opengl-sdl2/res/shaders/basic.shader");
+    shader.bind();
+    shader.setUniform4f("u_Color", 0.2f, 0.3f, 0.8f, 1.0f);
 
-    // Test the parsing code
-    std::cout << source.VertexSource << std::endl;
-    std::cout << source.FragmentSource << std::endl;
-    // end test
-
-    unsigned int shader = CreateShader(source.VertexSource,
-                                       source.FragmentSource);
-    GLCall(glUseProgram(shader));
-
-    GLCall(int location = glGetUniformLocation(shader, "u_Color"));
-    ASSERT(location != -1);
-    GLCall(glUniform4f(location, 0.2f, 0.3f, 0.8f, 1.0f));
-
-    // Unbounding
     va.unbind();
-    GLCall(glUseProgram(0));
-    GLCall(glBindBuffer(GL_ARRAY_BUFFER, 0));
-    GLCall(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0));
-
+    vb.unbind();
+    ib.unbind();
+    shader.unbind();
 
     float r = 0.0f;
     float increment = 0.05f;
@@ -200,12 +98,8 @@ int main()
 
         GLCall(glClear(GL_COLOR_BUFFER_BIT));
 
-        GLCall(glUseProgram(shader));
-
-        // The color of the rect
-        GLCall(glUniform4f(location, r, 0.3f, 0.8f, 1.0f));
-        // Bounding the vertex array objects
-        // Bounding the index buffer object
+        shader.bind();
+        shader.setUniform4f("u_Color", r, 0.3f, 0.8f, 1.0f);
         va.bind();
         ib.bind();
         // Draw on the screen
@@ -228,6 +122,5 @@ int main()
         }
     }
 
-    glDeleteProgram(shader);
     return 0;
 }

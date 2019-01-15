@@ -9,7 +9,8 @@ SOURCES += \
     src/vertexbuffer.cpp \
     src/indexbuffer.cpp \
     src/vertexarray.cpp \
-    src/vertexbufferlayout.cpp
+    src/vertexbufferlayout.cpp \
+    src/shader.cpp
 
 LIBS += -lSDL2 -lGL -lGLEW
 
@@ -21,4 +22,5 @@ HEADERS += \
     src/vertexbuffer.h \
     src/indexbuffer.h \
     src/vertexarray.h \
-    src/vertexbufferlayout.h
+    src/vertexbufferlayout.h \
+    src/shader.h
