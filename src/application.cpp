@@ -77,6 +77,8 @@ int main()
     ib.unbind();
     shader.unbind();
 
+    Renderer GLrenderer;
+
     float r = 0.0f;
     float increment = 0.05f;
 
@@ -96,14 +98,11 @@ int main()
 
         SDL_RenderClear(renderer);
 
-        GLCall(glClear(GL_COLOR_BUFFER_BIT));
+        GLrenderer.clear();
 
         shader.bind();
         shader.setUniform4f("u_Color", r, 0.3f, 0.8f, 1.0f);
-        va.bind();
-        ib.bind();
-        // Draw on the screen
-        GLCall(glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr));
+        GLrenderer.draw(va, ib, shader);
 
         if (r > 1.0f) {
             increment = -0.05f;

@@ -2,7 +2,7 @@
 #define SHADER_H
 
 #include <GL/glew.h>
-#include "renderer.h"
+//#include "renderer.h"
 #include <iostream>
 #include <string>
 #include <sstream>

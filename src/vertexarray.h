@@ -2,8 +2,8 @@
 #define VERTEXARRAY_H
 
 #include "vertexbuffer.h"
-#include "vertexbufferlayout.h"
-#include "renderer.h"
+class VertexBufferLayout;
+//#include "renderer.h"
 
 class VertexArray
 {
